@@ -1,0 +1,118 @@
+let
+    Source = Folder.Files("C:\Users\HP\Downloads\Pandas-Data-Science-Tasks-master\SalesAnalysis\Sales_Data"),
+    #"Filtered Hidden Files1" = Table.SelectRows(
+        Source, 
+        each [Attributes]?[Hidden]? <> true),
+    #"Invoke Custom Function1" = Table.AddColumn(
+        #"Filtered Hidden Files1", 
+        "Transform File", 
+        each #"Transform File"([Content])),
+    #"Renamed Columns1" = Table.RenameColumns(
+        #"Invoke Custom Function1", 
+        {"Name", "Source.Name"}),
+    #"Removed Other Columns1" = Table.SelectColumns(
+        #"Renamed Columns1", 
+        {"Source.Name", "Transform File"}),
+    #"Expanded Table Column1" = Table.ExpandTableColumn(
+        #"Removed Other Columns1", 
+        "Transform File", 
+        Table.ColumnNames(#"Transform File"(#"Sample File"))),
+    #"Filtered Rows" = Table.SelectRows(
+        #"Expanded Table Column1", 
+        each ([Order ID] <> "")),
+    #"Removed Columns" = Table.RemoveColumns(
+        #"Filtered Rows",{"Source.Name"}),
+    #"Split Column by Delimiter2" = Table.SplitColumn(#"Removed Columns", "Order Date", Splitter.SplitTextByDelimiter(" ", QuoteStyle.None), {"Order Date.1", "Order Date.2"}),
+    #"Renamed Columns3" = Table.RenameColumns(#"Split Column by Delimiter2",{{"Order Date.1", "Order Date"}, {"Order Date.2", "Order Time"}}),
+    #"Changed Type2" = Table.TransformColumnTypes(
+        #"Renamed Columns3",
+        {{"Order Time", type time}, 
+        {"Order Date", type date}}),
+    #"Removed Errors" = Table.RemoveRowsWithErrors(
+        #"Changed Type2", 
+        {"Order Date"}),
+    #"Duplicated Column" = Table.DuplicateColumn(
+        #"Removed Errors", 
+        "Order Date", 
+        "Order Date - Copy"),
+    #"Duplicated Column1" = Table.DuplicateColumn(
+        #"Duplicated Column", 
+        "Order Date - Copy", 
+        "Order Date - Copy - Copy"),
+    #"Calculated Quarter" = Table.TransformColumns(
+        #"Duplicated Column1",
+        {{"Order Date - Copy", 
+        Date.QuarterOfYear, Int64.Type}}),
+    #"Extracted Month" = Table.TransformColumns(
+        #"Calculated Quarter",
+        {{"Order Date - Copy - Copy", 
+        Date.Month, Int64.Type}}),
+    #"Renamed Columns" = Table.RenameColumns(#"Extracted Month",
+    {{"Order Date - Copy", 
+    "Order Quarters"}, 
+    {"Order Date - Copy - Copy", 
+    "Order Months"}}),
+    #"Trimmed Text" = Table.TransformColumns(
+        #"Renamed Columns",
+        {{"Purchase Address", 
+        Text.Trim, type text}}),
+    #"Duplicated Column2" = Table.DuplicateColumn(
+        #"Trimmed Text", 
+        "Purchase Address", 
+        "Purchase Address - Copy"),
+    #"Trimmed Text1" = Table.TransformColumns(
+        #"Duplicated Column2",
+        {{"Purchase Address - Copy", 
+        Text.Trim, type text}}),
+    #"Split Column by Delimiter" = Table.SplitColumn(
+        #"Trimmed Text1", 
+        "Purchase Address - Copy", 
+        Splitter.SplitTextByDelimiter(",", QuoteStyle.None), 
+        {"Purchase Address - Copy.1", 
+        "Purchase Address - Copy.2", 
+        "Purchase Address - Copy.3"}),
+    #"Changed Type" = Table.TransformColumnTypes(
+        #"Split Column by Delimiter",
+        {{"Purchase Address - Copy.1", type text}, 
+        {"Purchase Address - Copy.2", type text}, 
+        {"Purchase Address - Copy.3", type text}}),
+    #"Removed Columns1" = Table.RemoveColumns(
+        #"Changed Type",
+        {"Purchase Address - Copy.1"}),
+    #"Split Column by Delimiter1" = Table.SplitColumn(
+        #"Removed Columns1", 
+        "Purchase Address - Copy.3", 
+        Splitter.SplitTextByDelimiter(" ", QuoteStyle.None), 
+        {"Purchase Address - Copy.3.1", 
+        "Purchase Address - Copy.3.2", 
+        "Purchase Address - Copy.3.3"}),
+    #"Changed Type1" = Table.TransformColumnTypes(
+        #"Split Column by Delimiter1",
+        {{"Purchase Address - Copy.3.1", type text}, 
+        {"Purchase Address - Copy.3.2", type text}, 
+        {"Purchase Address - Copy.3.3", Int64.Type}}),
+    #"Removed Columns2" = Table.RemoveColumns(
+        #"Changed Type1",
+        {"Purchase Address - Copy.3.1", 
+        "Purchase Address - Copy.3.3"}),
+    #"Merged Columns" = Table.CombineColumns(
+        #"Removed Columns2",
+        {"Purchase Address - Copy.2", 
+        "Purchase Address - Copy.3.2"},
+        Combiner.CombineTextByDelimiter(",", QuoteStyle.None),"Merged"),
+    #"Renamed Columns2" = Table.RenameColumns(
+        #"Merged Columns",{{"Merged", "City"}}),
+    #"Removed Columns3" = Table.RemoveColumns(
+        #"Renamed Columns2",{"Purchase Address"}),
+    #"Changed Type3" = Table.TransformColumnTypes(
+        #"Removed Columns3",
+        {{"Quantity Ordered", Int64.Type}, 
+        {"Price Each", Currency.Type}}),
+    #"Added Custom" = Table.AddColumn(
+        #"Changed Type3", "Total Sales", 
+        each [Price Each]*[Quantity Ordered]),
+    #"Changed Type4" = Table.TransformColumnTypes(
+        #"Added Custom",
+        {{"Total Sales", Currency.Type}})
+in
+    #"Changed Type4"
